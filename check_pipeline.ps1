@@ -1,0 +1,1 @@
+Get-NetTCPConnection -LocalPort 5001, 5002, 5003 , 5004 -ErrorAction SilentlyContinue
