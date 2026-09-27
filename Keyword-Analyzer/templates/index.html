@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="text-center mb-5">
+    <h1 class="fw-bold">Resume Keyword Matcher</h1>
+    <p class="text-muted">Compare your application assets against a job description to discover critical skill gaps.</p>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+{% for category, message in messages %}
+<div class="alert alert-{{ category }} alert-dismissible fade show border-0 shadow-sm rounded-3 mb-4 mx-auto w-100 text-start"
+    role="alert" style="max-width: 1320px;">
+    <span class="me-2">⚠️</span> <strong>Hold up!</strong> {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endfor %}
+{% endif %}
+{% endwith %}
+
+<form action="/analyze" method="POST" enctype="multipart/form-data" id="analyzerForm">
+    <div class="row g-4">
+
+        <!-- Left Column: Your Resume -->
+        <div class="col-md-6">
+            <div class="card h-100 border-0 bg-light p-4 rounded-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="m-0 fw-semibold text-dark">Your Resume</h4>
+
+                    <ul class="nav nav-pills bg-white p-1 rounded-3 shadow-sm" style="font-size: 0.85rem;"
+                        id="resumeTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active py-1" id="resume-text-tab" data-bs-toggle="tab"
+                                data-bs-target="#resumeTextMode" type="button" role="tab" aria-controls="resumeTextMode"
+                                aria-selected="true">Text</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link py-1" id="resume-pdf-tab" data-bs-toggle="tab"
+                                data-bs-target="#resumePdfMode" type="button" role="tab" aria-controls="resumePdfMode"
+                                aria-selected="false">PDF File</button>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="tab-content mt-2 flex-grow-1 d-flex flex-column">
+                    <!-- Resume Text Input -->
+                    <div class="tab-pane fade show active flex-grow-1 d-flex flex-column" id="resumeTextMode"
+                        role="tabpanel" aria-labelledby="resume-text-tab">
+                        <textarea class="form-control border-0 shadow-sm flex-grow-1" name="resume" rows="12"
+                            placeholder="Paste your raw resume text content here...">{% if resume %}{{ resume }}{% endif %}</textarea>
+                    </div>
+
+                    <!-- Resume PDF Upload -->
+                    <div class="tab-pane fade flex-grow-1" id="resumePdfMode" role="tabpanel"
+                        aria-labelledby="resume-pdf-tab">
+                        <div
+                            class="bg-white rounded shadow-sm p-5 text-center border border-2 border-dashed h-100 d-flex flex-column justify-content-center align-items-center">
+                            <label for="resumeFile" class="form-label d-block text-muted mb-3 fw-medium">Upload your
+                                resume as a PDF file</label>
+                            <input class="form-control w-75 mx-auto" type="file" id="resumeFile" name="resume_file"
+                                accept=".pdf">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Job Description & Symmetrical Cover Letter Card -->
+        <div class="col-md-6 d-flex flex-column gap-4">
+            <!-- Job Description Card -->
+            <div class="card border-0 bg-light p-4 rounded-4 flex-grow-1">
+                <h4 class="fw-semibold text-dark mb-3">Job Description</h4>
+                <textarea class="form-control border-0 shadow-sm flex-grow-1" name="job" rows="5"
+                    placeholder="Paste the target job requirements or description...">{% if job %}{{ job }}{% endif %}</textarea>
+            </div>
+
+            <!-- Cover Letter Card: Symmetrical UI Design -->
+            <div class="card border-0 bg-light p-4 rounded-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="m-0 fw-semibold text-dark">Cover Letter</h4>
+
+                    <!-- Clean Pill Tabs matching Resume UI Layout -->
+                    <ul class="nav nav-pills bg-white p-1 rounded-3 shadow-sm" style="font-size: 0.85rem;"
+                        id="coverLetterTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active py-1" id="cl-none-tab" data-bs-toggle="tab"
+                                data-bs-target="#clNoneMode" type="button" role="tab" aria-controls="clNoneMode"
+                                aria-selected="true" onclick="handleCoverLetterMode('none')">None</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link py-1" id="cl-text-tab" data-bs-toggle="tab"
+                                data-bs-target="#clTextMode" type="button" role="tab" aria-controls="clTextMode"
+                                aria-selected="false" onclick="handleCoverLetterMode('text')">Text</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link py-1" id="cl-pdf-tab" data-bs-toggle="tab"
+                                data-bs-target="#clPdfMode" type="button" role="tab" aria-controls="clPdfMode"
+                                aria-selected="false" onclick="handleCoverLetterMode('pdf')">PDF File</button>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Tab Content Containers -->
+                <div class="tab-content mt-2">
+                    <!-- None Selection Panel -->
+                    <div class="tab-pane fade show active" id="clNoneMode" role="tabpanel"
+                        aria-labelledby="cl-none-tab">
+                        <div class="bg-white rounded shadow-sm p-4 text-center border text-muted"
+                            style="font-size: 0.9rem; font-style: italic;">
+                            No cover letter context selected. Evaluation matrix will run exclusively on resume assets.
+                        </div>
+                    </div>
+
+                    <!-- Text Area Input Panel -->
+                    <div class="tab-pane fade" id="clTextMode" role="tabpanel" aria-labelledby="cl-text-tab">
+                        <textarea class="form-control border-0 shadow-sm" id="coverLetterTextArea" name="cover_letter"
+                            rows="5"
+                            placeholder="Paste your cover letter content...">{% if cover_letter %}{{ cover_letter }}{% endif %}</textarea>
+                    </div>
+
+                    <!-- PDF Drag/Drop File Upload Panel -->
+                    <div class="tab-pane fade" id="clPdfMode" role="tabpanel" aria-labelledby="cl-pdf-tab">
+                        <div class="bg-white rounded shadow-sm p-4 text-center border border-2 border-dashed">
+                            <label for="coverLetterFile" class="form-label d-block text-muted mb-2">Upload your cover
+                                letter as a PDF file</label>
+                            <input class="form-control" type="file" id="coverLetterFile" name="cover_letter_file"
+                                accept=".pdf">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="text-center mt-5">
+        <button type="submit" class="btn btn-primary btn-lg px-5 py-3 rounded-3 shadow fw-medium w-100">Analyze
+            Application Ecosystem</button>
+    </div>
+</form>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Resets field values on 'None' toggle to keep form data submissions clean
+    function handleCoverLetterMode(mode) {
+        if (mode === 'none') {
+            document.getElementById('coverLetterTextArea').value = "";
+            document.getElementById('coverLetterFile').value = "";
+        }
+    }
+
+    // IH#7: FLEXIBILITY - Allow "Enter" key to submit from standard focus states
+    document.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+            document.getElementById('analyzerForm').submit();
+        }
+    });
+</script>
+{% endblock %}

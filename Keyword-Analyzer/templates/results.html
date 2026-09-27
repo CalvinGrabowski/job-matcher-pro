@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold">Match Analysis Results</h2>
+
+    <form action="/" method="POST" class="m-0">
+        <input type="hidden" name="job" value="{{ job_display }}">
+        <input type="hidden" name="resume" value="{{ resume_display }}">
+        <input type="hidden" name="cover_letter" value="{{ cl_display }}">
+        <form action="/" method="POST" class="m-0">
+            <input type="hidden" name="job" value="{{ job_raw_clean }}">
+            <input type="hidden" name="resume" value="{{ resume_display }}">
+            <input type="hidden" name="cover_letter" value="{{ cl_display }}">
+            <button type="submit" class="btn btn-outline-secondary">✏️ Edit Application</button>
+        </form>
+    </form>
+</div>
+
+<div class="card border-0 shadow-sm p-4 mb-5 rounded-4 bg-light">
+    <div class="d-flex justify-content-between mb-2">
+        <h5 class="fw-bold m-0">Keyword Alignment Matrix</h5>
+        <h5 class="fw-bold m-0">
+            <span id="base-score" class="text-success">{{ score }}%</span>
+            <span id="adjusted-score-wrapper" class="ms-1 d-none"
+                style="color: #198754; font-weight: 600; opacity: 0.9;"></span>
+        </h5>
+    </div>
+    <div class="progress position-relative" style="height: 25px; border-radius: 12px; background-color: #e9ecef;">
+        <div id="base-progress-bar"
+            class="progress-bar bg-success progress-bar-striped progress-bar-animated position-absolute start-0 top-0 h-100"
+            role="progressbar" style="width: {{ score }}%; z-index: 2;" aria-valuenow="{{ score }}" aria-valuemin="0"
+            aria-valuemax="100"></div>
+        <div id="adjusted-progress-bar"
+            class="progress-bar progress-bar-striped progress-bar-animated position-absolute start-0 top-0 h-100"
+            role="progressbar" style="width: {{ score }}%; z-index: 1; background-color: #a3cfbb; opacity: 0.95;"
+            aria-valuenow="{{ score }}" aria-valuemin="0" aria-valuemax="100"></div>
+    </div>
+</div>
+
+{% if missing %}
+<h4 class="fw-bold text-dark mb-3">Critical Missing Keywords (Click Override Missing Keywords):</h4>
+<div class="row g-3 mb-5">
+    {% for word in missing %}
+    <div class="col-md-4 col-lg-3">
+        <div class="alert alert-danger border-0 shadow-sm rounded-3 m-0 py-2 d-flex align-items-center kw-override-btn"
+            style="cursor: pointer; user-select: none; transition: all 0.2s ease-in-out;"
+            onclick="toggleKeywordOverride(this)" data-keyword="{{ word }}">
+            <span class="status-icon me-2">⚠️</span>
+            <strong class="text-dark kw-word-text">{{ word }}</strong>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-success border-0 shadow-sm rounded-3 mb-5 py-3">
+    🎉 <strong>Flawless execution!</strong> Your submitted application cleanly covers 100% of the targeted mechanical
+    and technical assets.
+</div>
+{% endif %}
+
+<hr class="mb-5">
+<h4 class="fw-bold text-dark mb-4">Document Alignment Viewer</h4>
+<div class="row g-4">
+    <div class="col-md-6">
+        <h5 class="text-muted mb-3">Target Job Description</h5>
+        <div id="job-description-panel" class="readonly-doc shadow-sm" style="white-space: pre-wrap;">{{ job_display |
+            safe }}</div>
+    </div>
+
+    <div class="col-md-6">
+        <h5 class="text-muted mb-3">Your Application Ecosystem</h5>
+        <div class="readonly-doc shadow-sm" style="white-space: pre-wrap;">
+            <h6 class="fw-bold text-primary border-bottom pb-2">RESUME</h6>
+            {{ resume_display }}
+
+            {% if cl_display %}
+            <h6 class="fw-bold text-primary border-bottom pb-2 mt-5">COVER LETTER</h6>
+            {{ cl_display }}
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    const baseScore = parseFloat("{{ score }}") || 0.0;
+    const totalMissingWords = parseInt("{{ missing|length }}") || 0;
+    const dismissedKeywords = new Set();
+
+    function toggleKeywordOverride(element) {
+        const keyword = element.getAttribute('data-keyword').trim().toLowerCase();
+        const iconSpan = element.querySelector('.status-icon');
+
+        // 1. Toggle item local collection tracking state
+        if (dismissedKeywords.has(keyword)) {
+            dismissedKeywords.delete(keyword);
+
+            element.classList.remove('alert-success');
+            element.classList.add('alert-danger');
+            iconSpan.textContent = "⚠️";
+
+            toggleHighlightColor(keyword, false);
+        } else {
+            dismissedKeywords.add(keyword);
+
+            element.classList.remove('alert-danger');
+            element.classList.add('alert-success');
+            iconSpan.textContent = "✅";
+
+            toggleHighlightColor(keyword, true);
+        }
+
+        // 2. Proportional Gap Multiplier Calculations
+        const scoreGap = 100 - baseScore;
+        const weightPerWord = totalMissingWords > 0 ? (scoreGap / totalMissingWords) : 0;
+
+        const addedBoost = dismissedKeywords.size * weightPerWord;
+        const adjustedScore = parseFloat((baseScore + addedBoost).toFixed(2));
+
+        const scoreWrapper = document.getElementById('adjusted-score-wrapper');
+        const adjustedBar = document.getElementById('adjusted-progress-bar');
+
+        if (dismissedKeywords.size > 0) {
+            scoreWrapper.textContent = `(${adjustedScore}%)`;
+            scoreWrapper.classList.remove('d-none');
+            adjustedBar.style.width = `${adjustedScore}%`;
+        } else {
+            scoreWrapper.classList.add('d-none');
+            adjustedBar.style.width = `${baseScore}%`;
+        }
+    }
+
+    function toggleHighlightColor(keyword, isVerified) {
+        const panel = document.getElementById('job-description-panel');
+        if (!panel) return;
+
+        // Pull elements that the backend wrapped (supports both standard <mark> and generic spans)
+        const highlights = panel.querySelectorAll('mark, span[style*="background"]');
+
+        highlights.forEach(el => {
+            const elText = el.textContent.trim().toLowerCase();
+
+            // Match exact strings or overlapping word roots
+            if (elText === keyword || elText.includes(keyword) || keyword.includes(elText)) {
+                if (isVerified) {
+                    // Strips out backend styles and applies the light-green look matching the progress bar
+                    el.style.setProperty('background-color', '#a3cfbb', 'important');
+                    el.style.setProperty('color', '#0f5132', 'important');
+                    el.style.setProperty('border-radius', '4px', 'important');
+                } else {
+                    // Reverts completely back to default yellow
+                    el.style.backgroundColor = '';
+                    el.style.color = '';
+                }
+            }
+        });
+    }
+</script>
+{% endblock %}
