@@ -6,7 +6,7 @@ Write-Host "Launching Microservices silently in the background..." -ForegroundCo
 Start-Process powershell -WindowStyle Hidden -ArgumentList "-Command", "cd ../services/filler_word_remover; python remover_service.py"
 
 # Section Parser (Port 5002)
-Start-Process powershell -WindowStyle Hidden -ArgumentList "-Command", "cd ../services/section_parser; python snipper_service.py"
+Start-Process powershell -WindowStyle Hidden -ArgumentList "-Command", "cd ../services/section_snipper; python snipper_service.py"
 
 # Text Correction (Port 5003)
 Start-Process powershell -WindowStyle Hidden -ArgumentList "-Command", "cd ../services/text_correction; python correction_service.py"
