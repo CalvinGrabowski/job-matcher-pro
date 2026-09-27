@@ -59,8 +59,8 @@ The application consists of a central Flask web application that coordinates mul
 Resume PDF
       \
 Cover Letter ---> Main Web Application ---> Match Analysis
-      /                    |
-Job Description            |
+      /                     |
+Job Description             |
                             v
                      PDF-to-Text Service
                             |
@@ -129,6 +129,8 @@ job-matcher-pro/
 
 Start all microservices:
 
+From the main directory, you can do these commands, or navigate to the scripts file and remove the \scripts part of the commands.
+
 ```powershell
 .\scripts\setup_pipeline.ps1
 ```
@@ -142,7 +144,7 @@ Launch the main application:
 Verify services are active:
 
 ```powershell
-Get-NetTCPConnection -LocalPort 5001,5002,5003,5004
+.\scripts\check_pipeline.ps1
 ```
 
 Stop all services:
